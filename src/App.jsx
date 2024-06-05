@@ -7,6 +7,7 @@ const App = () => {
   const [isError, setIsError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true); // New state variable
+  const [sortOption, setSortOption] = useState("asc"); // New state variable for sorting
 
   // Fetch data from API using Async Await
   const getMyPostData = async () => {
@@ -30,33 +31,60 @@ const App = () => {
     setSearchQuery(e.target.value);
   };
 
-  // Filter data based on search query
-  const filteredData = myData.filter((user) => {
-    const fullName =
-      `${user.name.title} ${user.name.first} ${user.name.last}`.toLowerCase();
-    const country = user.location.country.toLowerCase();
-    const gender = user.gender.toLowerCase();
-    const search = searchQuery.toLowerCase();
+  // Handle sort option change
+  const handleSortChange = (e) => {
+    setSortOption(e.target.value);
+  };
 
-    return (
-      fullName.includes(search) ||
-      country.includes(search) ||
-      gender.includes(search)
-    );
-  });
+  // Filter and sort data based on search query and sort option
+  const filteredData = myData
+    .filter((user) => {
+      const fullName =
+        `${user.name.title} ${user.name.first} ${user.name.last}`.toLowerCase();
+      const country = user.location.country.toLowerCase();
+      const gender = user.gender.toLowerCase();
+      const search = searchQuery.toLowerCase();
+
+      return (
+        fullName.includes(search) ||
+        country.includes(search) ||
+        gender.includes(search)
+      );
+    })
+    .sort((a, b) => {
+      if (sortOption === "asc") {
+        return a.name.first.localeCompare(b.name.first);
+      } else if (sortOption === "desc") {
+        return b.name.first.localeCompare(a.name.first);
+      } else if (sortOption === "date") {
+        return new Date(a.registered.date) - new Date(b.registered.date);
+      }
+      return 0;
+    });
 
   // JSX to render
   return (
     <section className="w-full min-h-screen text-white p-10 bg-zinc-900">
       <h1 className="text-6xl text-center font-bold mb-10">Profile Finder</h1>
 
-      <input
-        type="text"
-        placeholder="Search by name, country, gender"
-        value={searchQuery}
-        onChange={handleSearch}
-        className="w-full p-2 mb-10 outline-none rounded-lg border-2 border-zinc-700 bg-zinc-800 text-white"
-      />
+      <div className="flex mb-10">
+        <input
+          type="text"
+          placeholder="Search by name, country, gender"
+          value={searchQuery}
+          onChange={handleSearch}
+          className="w-full p-2 outline-none rounded-lg border-2 border-zinc-700 bg-zinc-800 text-white"
+        />
+        <select
+          value={sortOption}
+          onChange={handleSortChange}
+          className="ml-4 p-2 outline-none rounded-lg border-2 border-zinc-700 bg-zinc-800 text-white"
+        >
+          <option value="asc">Sort by (A-Z)</option>
+          <option value="desc">Sort by (Z-A)</option>
+          <option value="date">Sort by Date</option>
+        </select>
+      </div>
 
       {isError && (
         <h2 className="text-center mt-10 text-2xl text-red-600">{isError}</h2>
