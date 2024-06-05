@@ -6,6 +6,7 @@ const App = () => {
   const [myData, setMyData] = useState([]);
   const [isError, setIsError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true); // New state variable
 
   // Fetch data from API using Async Await
   const getMyPostData = async () => {
@@ -14,6 +15,8 @@ const App = () => {
       setMyData(res.data.results);
     } catch (error) {
       setIsError(error.message);
+    } finally {
+      setIsLoading(false); // Set loading to false after data is fetched or error occurs
     }
   };
 
@@ -58,34 +61,39 @@ const App = () => {
       {isError && (
         <h2 className="text-center mt-10 text-2xl text-red-600">{isError}</h2>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-        {filteredData.map((user, index) => (
-          <div
-            key={index}
-            className="card bg-zinc-800 p-5 rounded-lg shadow-lg"
-          >
-            <img
-              src={user.picture.large}
-              alt={user.name.first}
-              className="rounded-full mx-auto mb-4"
-            />
-            <h2 className="text-xl text-center font-semibold">
-              {user.name.title} {user.name.first} {user.name.last}
-            </h2>
+      
+      {isLoading ? (
+        <h2 className="text-center mt-10 text-2xl text-white">Loading...</h2>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+          {filteredData.map((user, index) => (
+            <div
+              key={index}
+              className="card bg-zinc-800 p-5 rounded-lg shadow-lg"
+            >
+              <img
+                src={user.picture.large}
+                alt={user.name.first}
+                className="rounded-full mx-auto mb-4"
+              />
+              <h2 className="text-xl text-center font-semibold">
+                {user.name.title} {user.name.first} {user.name.last}
+              </h2>
 
-            <p className=" text-center text-blue-400">@{user.login.username}</p>
-            <p className="mt-5 text-zinc-400">Gender: {user.gender}</p>
-            <p className="text-zinc-400">
-              Email: {user.email.split(".")[1]}.com
-            </p>
-            <p className=" text-zinc-400">Phone: {user.phone}</p>
-            <p className=" text-zinc-400">Country: {user.location.country}</p>
-            <p className="text-zinc-400">
-              Registered: {new Date(user.registered.date).toLocaleDateString()}
-            </p>
-          </div>
-        ))}
-      </div>
+              <p className=" text-center text-blue-400">@{user.login.username}</p>
+              <p className="mt-5 text-zinc-400">Gender: {user.gender}</p>
+              <p className="text-zinc-400">
+                Email: {user.email.split(".")[1]}.com
+              </p>
+              <p className=" text-zinc-400">Phone: {user.phone}</p>
+              <p className=" text-zinc-400">Country: {user.location.country}</p>
+              <p className="text-zinc-400">
+                Registered: {new Date(user.registered.date).toLocaleDateString()}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 };
