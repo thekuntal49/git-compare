@@ -1,128 +1,305 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { useState } from 'react';
+import { Trophy, Users, GitFork, Star, Calendar, Code, Activity, Award } from 'lucide-react';
 
 const App = () => {
-  // State variables
-  const [myData, setMyData] = useState([]);
-  const [isError, setIsError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true); // New state variable
-  const [sortOption, setSortOption] = useState("asc"); // New state variable for sorting
+  const [userA, setUserA] = useState('');
+  const [userB, setUserB] = useState('');
+  const [dataA, setDataA] = useState(null);
+  const [dataB, setDataB] = useState(null);
+  const [reposA, setReposA] = useState([]);
+  const [reposB, setReposB] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Fetch data from API using Async Await
-  const getMyPostData = async () => {
+  const fetchUserData = async (username) => {
+    const userRes = await fetch(`https://api.github.com/users/${username}`);
+    if (!userRes.ok) throw new Error(`User ${username} not found`);
+    const userData = await userRes.json();
+    
+    const repoRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated`);
+    const reposData = await repoRes.json();
+    
+    return { user: userData, repos: reposData };
+  };
+
+  const handleCompare = async () => {
+    if (!userA.trim() || !userB.trim()) return;
+    
     try {
-      const res = await axios.get("https://randomuser.me/api/?results=500");
-      setMyData(res.data.results);
+      setLoading(true);
+      setError('');
+      const [a, b] = await Promise.all([fetchUserData(userA.trim()), fetchUserData(userB.trim())]);
+      setDataA(a.user);
+      setDataB(b.user);
+      setReposA(a.repos);
+      setReposB(b.repos);
     } catch (error) {
-      setIsError(error.message);
+      setError(error.message);
     } finally {
-      setIsLoading(false); // Set loading to false after data is fetched or error occurs
+      setLoading(false);
     }
   };
 
-  // Call the function to fetch data on component mount
-  useEffect(() => {
-    getMyPostData();
-  }, []);
-
-  // Handle search input change
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
+  const getAdvancedStats = (repos, userData) => {
+    const stars = repos.reduce((acc, r) => acc + r.stargazers_count, 0);
+    const forks = repos.reduce((acc, r) => acc + r.forks_count, 0);
+    const langs = repos.reduce((acc, r) => {
+      if (r.language) acc[r.language] = (acc[r.language] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const topLang = Object.entries(langs).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+    const recentActivity = repos.filter(r => {
+      const lastUpdate = new Date(r.updated_at);
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      return lastUpdate > sixMonthsAgo;
+    }).length;
+    
+    const avgStarsPerRepo = repos.length > 0 ? Math.round(stars / repos.length * 10) / 10 : 0;
+    const followerRatio = userData.following > 0 ? Math.round((userData.followers / userData.following) * 100) / 100 : userData.followers;
+    
+    return { 
+      stars, 
+      forks, 
+      topLang, 
+      recentActivity, 
+      avgStarsPerRepo,
+      followerRatio,
+      totalLangs: Object.keys(langs).length
+    };
   };
 
-  // Handle sort option change
-  const handleSortChange = (e) => {
-    setSortOption(e.target.value);
+  const calculateOverallScore = (userData, stats) => {
+    const followerScore = Math.min(userData.followers / 10, 100);
+    const starScore = Math.min(stats.stars / 5, 100);
+    const repoScore = Math.min(userData.public_repos / 2, 100);
+    const activityScore = Math.min(stats.recentActivity * 5, 100);
+    const diversityScore = Math.min(stats.totalLangs * 10, 100);
+    
+    return Math.round((followerScore + starScore + repoScore + activityScore + diversityScore) / 5);
   };
 
-  // Filter and sort data based on search query and sort option
-  const filteredData = myData
-    .filter((user) => {
-      const fullName =
-        `${user.name.title} ${user.name.first} ${user.name.last}`.toLowerCase();
-      const country = user.location.country.toLowerCase();
-      const gender = user.gender.toLowerCase();
-      const search = searchQuery.toLowerCase();
+  const StatCard = ({ icon: Icon, label, valueA, valueB, isHigherBetter = true, formatValue = (v) => v }) => {
+    const numA = typeof valueA === 'number' ? valueA : 0;
+    const numB = typeof valueB === 'number' ? valueB : 0;
+    
+    let winnerA = false, winnerB = false;
+    if (numA !== numB) {
+      winnerA = isHigherBetter ? numA > numB : numA < numB;
+      winnerB = isHigherBetter ? numB > numA : numB < numA;
+    }
 
-      return (
-        fullName.includes(search) ||
-        country.includes(search) ||
-        gender.includes(search)
-      );
-    })
-    .sort((a, b) => {
-      if (sortOption === "asc") {
-        return a.name.first.localeCompare(b.name.first);
-      } else if (sortOption === "desc") {
-        return b.name.first.localeCompare(a.name.first);
-      } else if (sortOption === "date") {
-        return new Date(a.registered.date) - new Date(b.registered.date);
-      }
-      return 0;
-    });
-
-  // JSX to render
-  return (
-    <section className="w-full min-h-screen text-white p-10 bg-zinc-900">
-      <h1 className="text-6xl text-center font-bold mb-10">Profile Finder</h1>
-
-      <div className="flex mb-10">
-        <input
-          type="text"
-          placeholder="Search by name, country, gender"
-          value={searchQuery}
-          onChange={handleSearch}
-          className="w-full p-2 outline-none rounded-lg border-2 border-zinc-700 bg-zinc-800 text-white"
-        />
-        <select
-          value={sortOption}
-          onChange={handleSortChange}
-          className="ml-4 p-2 outline-none rounded-lg border-2 border-zinc-700 bg-zinc-800 text-white"
-        >
-          <option value="asc">Sort by (A-Z)</option>
-          <option value="desc">Sort by (Z-A)</option>
-          <option value="date">Sort by Date</option>
-        </select>
+    return (
+      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+        <div className={`flex items-center space-x-3 ${winnerA ? 'text-green-600 font-semibold' : 'text-gray-700'}`}>
+          {winnerA && <Trophy className="w-4 h-4 text-yellow-500" />}
+          <span className="text-lg">{formatValue(valueA)}</span>
+        </div>
+        
+        <div className="flex items-center space-x-2 text-gray-600">
+          <Icon className="w-5 h-5" />
+          <span className="font-medium">{label}</span>
+        </div>
+        
+        <div className={`flex items-center space-x-3 ${winnerB ? 'text-green-600 font-semibold' : 'text-gray-700'}`}>
+          <span className="text-lg">{formatValue(valueB)}</span>
+          {winnerB && <Trophy className="w-4 h-4 text-yellow-500" />}
+        </div>
       </div>
+    );
+  };
 
-      {isError && (
-        <h2 className="text-center mt-10 text-2xl text-red-600">{isError}</h2>
-      )}
-      
-      {isLoading ? (
-        <h2 className="text-center mt-10 text-2xl text-white">Loading...</h2>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-          {filteredData.map((user, index) => (
-            <div
-              key={index}
-              className="card bg-zinc-800 p-5 rounded-lg shadow-lg"
-            >
-              <img
-                src={user.picture.large}
-                alt={user.name.first}
-                className="rounded-full mx-auto mb-4"
-              />
-              <h2 className="text-xl text-center font-semibold">
-                {user.name.title} {user.name.first} {user.name.last}
-              </h2>
-
-              <p className=" text-center text-blue-400">@{user.login.username}</p>
-              <p className="mt-5 text-zinc-400">Gender: {user.gender}</p>
-              <p className="text-zinc-400">
-                Email: {user.email.split(".")[1]}.com
-              </p>
-              <p className=" text-zinc-400">Phone: {user.phone}</p>
-              <p className=" text-zinc-400">Country: {user.location.country}</p>
-              <p className="text-zinc-400">
-                Registered: {new Date(user.registered.date).toLocaleDateString()}
-              </p>
-            </div>
-          ))}
+  const UserCard = ({ userData, stats, score, isWinner }) => (
+    <div className={`bg-white rounded-xl p-6 shadow-lg border-2 transition-all ${
+      isWinner ? 'border-yellow-500 shadow-xl scale-105' : 'border-gray-200'
+    }`}>
+      {isWinner && (
+        <div className="flex items-center justify-center mb-4">
+          <div className="bg-yellow-500 text-white px-4 py-2 rounded-full flex items-center space-x-2">
+            <Trophy className="w-5 h-5" />
+            <span className="font-bold">WINNER</span>
+          </div>
         </div>
       )}
-    </section>
+      
+      <div className="text-center mb-4">
+        <img 
+          src={userData.avatar_url} 
+          alt={userData.login} 
+          className="w-24 h-24 rounded-full mx-auto border-4 border-blue-500 shadow-lg"
+        />
+        <h3 className="mt-3 text-xl font-bold text-gray-800">{userData.name || userData.login}</h3>
+        <p className="text-gray-600">@{userData.login}</p>
+        {userData.bio && <p className="text-sm text-gray-500 mt-2 italic">"{userData.bio}"</p>}
+      </div>
+      
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-lg text-center">
+        <div className="text-3xl font-bold">{score}</div>
+        <div className="text-sm opacity-90">Overall Score</div>
+      </div>
+    </div>
+  );
+
+  const statsA = dataA ? getAdvancedStats(reposA, dataA) : null;
+  const statsB = dataB ? getAdvancedStats(reposB, dataB) : null;
+  const scoreA = dataA && statsA ? calculateOverallScore(dataA, statsA) : 0;
+  const scoreB = dataB && statsB ? calculateOverallScore(dataB, statsB) : 0;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-5xl font-bold text-gray-800 mb-4">
+            Git<span className="text-blue-600">Compare</span>
+          </h1>
+          <p className="text-xl text-gray-600">Compare GitHub developers side by side</p>
+        </div>
+
+        {/* Search Section */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-center">
+            <input
+              type="text"
+              placeholder="Enter first GitHub username"
+              className="px-6 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none w-full md:w-64"
+              value={userA}
+              onChange={(e) => setUserA(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleCompare()}
+            />
+            
+            <div className="text-2xl font-bold text-gray-400">VS</div>
+            
+            <input
+              type="text"
+              placeholder="Enter second GitHub username"
+              className="px-6 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none w-full md:w-64"
+              value={userB}
+              onChange={(e) => setUserB(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleCompare()}
+            />
+            
+            <button
+              onClick={handleCompare}
+              disabled={!userA.trim() || !userB.trim() || loading}
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-lg font-bold text-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
+            >
+              {loading ? 'Comparing...' : 'Compare'}
+            </button>
+          </div>
+          
+          {error && (
+            <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center">
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* Results Section */}
+        {dataA && dataB && statsA && statsB && (
+          <div className="space-y-8">
+            {/* User Cards */}
+            <div className="grid md:grid-cols-2 gap-8">
+              <UserCard 
+                userData={dataA} 
+                stats={statsA} 
+                score={scoreA} 
+                isWinner={scoreA > scoreB} 
+              />
+              <UserCard 
+                userData={dataB} 
+                stats={statsB} 
+                score={scoreB} 
+                isWinner={scoreB > scoreA} 
+              />
+            </div>
+
+            {/* Detailed Comparison */}
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Detailed Comparison</h2>
+              
+              <div className="space-y-4">
+                <StatCard 
+                  icon={Users} 
+                  label="Followers" 
+                  valueA={dataA.followers} 
+                  valueB={dataB.followers} 
+                />
+                
+                <StatCard 
+                  icon={Star} 
+                  label="Total Stars" 
+                  valueA={statsA.stars} 
+                  valueB={statsB.stars} 
+                />
+                
+                <StatCard 
+                  icon={GitFork} 
+                  label="Total Forks" 
+                  valueA={statsA.forks} 
+                  valueB={statsB.forks} 
+                />
+                
+                <StatCard 
+                  icon={Code} 
+                  label="Public Repositories" 
+                  valueA={dataA.public_repos} 
+                  valueB={dataB.public_repos} 
+                />
+                
+                <StatCard 
+                  icon={Activity} 
+                  label="Recent Activity (6 months)" 
+                  valueA={statsA.recentActivity} 
+                  valueB={statsB.recentActivity} 
+                />
+                
+                <StatCard 
+                  icon={Award} 
+                  label="Avg Stars per Repo" 
+                  valueA={statsA.avgStarsPerRepo} 
+                  valueB={statsB.avgStarsPerRepo} 
+                  formatValue={(v) => v.toFixed(1)}
+                />
+                
+                <StatCard 
+                  icon={Code} 
+                  label="Programming Languages" 
+                  valueA={statsA.totalLangs} 
+                  valueB={statsB.totalLangs} 
+                />
+                
+                <StatCard 
+                  icon={Users} 
+                  label="Follower/Following Ratio" 
+                  valueA={statsA.followerRatio} 
+                  valueB={statsB.followerRatio} 
+                  formatValue={(v) => v.toFixed(1)}
+                />
+                
+                <StatCard 
+                  icon={Calendar} 
+                  label="Years on GitHub" 
+                  valueA={new Date().getFullYear() - new Date(dataA.created_at).getFullYear()} 
+                  valueB={new Date().getFullYear() - new Date(dataB.created_at).getFullYear()} 
+                />
+                
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="text-gray-700">
+                    <span className="font-medium">Top Language:</span> {statsA.topLang}
+                  </div>
+                  <Code className="w-5 h-5 text-gray-600" />
+                  <div className="text-gray-700">
+                    <span className="font-medium">Top Language:</span> {statsB.topLang}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
