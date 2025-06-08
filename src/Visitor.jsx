@@ -3,7 +3,7 @@ import axios from "axios";
 
 export const Visitor = () => {
   const backendUrl = "https://api.socialclubs.fun";
-  const projectName = "YouTube Channel Tracker";
+  const projectName = "Git Compare";
   const PROJECT_NAME = projectName.toLowerCase().split(" ").join("");
 
   const getBrowserFingerprint = () => {
