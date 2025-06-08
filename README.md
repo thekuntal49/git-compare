@@ -1,8 +1,34 @@
-# React + Vite
+# GitHub User Compare
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A sleek web app to compare two GitHub users in detail. Enter two GitHub usernames and instantly get a side-by-side comparison of their public stats, overall scores, programming languages, and activity insights.
 
-Currently, two official plugins are available:
+## 🚀 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 📊 **Side-by-side Comparison**  
+  Compare followers, stars, forks, public repos, recent activity, and more.
+
+- 🏆 **Overall Score & Winner**  
+  A calculated score highlights who’s leading in key metrics.
+
+- 🔍 **Detailed Stats**  
+  View programming languages used, follower/following ratio, years on GitHub, and top languages.
+
+- ✅ **No Authentication Needed**  
+  Just enter GitHub usernames and compare instantly.
+
+## 🧠 Use Case
+
+- **Recruiters** evaluating candidates’ GitHub profiles  
+- **Developers** benchmarking peers or competitors  
+- **Open source enthusiasts** curious about contributors
+
+## 🛠️ Built With
+
+- **React.js** – for UI  
+- **GitHub REST API v3** – to fetch user data and repos  
+- **Tailwind CSS** – for styling  
+- **Custom scoring algorithm** – to calculate overall user scores
+
+## 🔗 Live Demo
+
+[GitHub User Compare](https://git-compare-ten.vercel.app)
