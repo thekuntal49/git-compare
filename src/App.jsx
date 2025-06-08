@@ -198,7 +198,7 @@ const App = () => {
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-5xl font-bold text-gray-800 mb-4">
-            Git<span className="text-blue-600">Compare</span>
+            GitHub User<span className="text-blue-600">Compare</span>
           </h1>
           <p className="text-xl text-gray-600">
             Compare GitHub developers side by side
